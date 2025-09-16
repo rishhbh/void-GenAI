@@ -1,67 +1,141 @@
 import os
 import pyttsx3
-import datetime
+from datetime import datetime
 import wikipedia
 import speech_recognition as sr
 import webbrowser
 from youtubesearchpython import VideosSearch
 import pyjokes
-import pyautogui as pyAutoGUI
+import pyautogui
 import google.generativeai as genAI
+from dotenv import load_dotenv
+import random
+import platform
+import subprocess
 
-engine = pyttsx3.init('sapi5')
+engine = pyttsx3.init()
 voices = engine.getProperty('voices')
 engine.setProperty('voices', voices[0].id)
 
-genAI.configure(api_key="#-------YOUR API KEY--------#")
-model = genAI.GenerativeModel("gemini-1.5-flash")
+load_dotenv()
+api_key = os.getenv("API_KEY")
+genAI.configure(api_key=api_key)
+model = genAI.GenerativeModel("gemini-2.0-flash")
 
 def speak(audio):
     engine.say(audio)
     engine.runAndWait() 
-
+    
 def wishme():
-    hourNow = int(datetime.datetime.now().hour)
-    if hourNow>0 and hourNow<12:
-        print("Hey! Good Morning. I'm void. Please tell me how I may assist you?")
-        speak("Hey! Good Morning. I'm void. Please tell me how I may assist you?")
-    elif hourNow>12 and hourNow<15:
-        print("Hey! Good Afternoon. I'm void. Please tell me how I may assist you?")
-        speak("Hey! Good Afternoon. I'm void. Please tell me how I may assist you?")
+    hour_now = int(datetime.now().hour)
+    if hour_now>0 and hour_now<12:
+        greeting = "Ah, morning. Everyone's favorite nightmare."
+    elif hour_now>12 and hour_now<15:
+        greeting = "Afternoon already? Time well wasted."
     else:
-        print("Hey! Good Evening. I'm void. Please tell me how I may assist you?")
-        speak("Hey! Good Evening. I'm void. Please tell me how I may assist you?")
+        greeting = "Evening. Because what could possibly go wrong now?"
+        
+    print(greeting)
+    speak(greeting)
+    
+listening_lines = [
+    "let's hear whatever this is...",
+    "umm...",
+    "this better involve actual words...",
+    "speak, maybe...",
+    "speak in english...",
+    "let's go...",
+    "let's suffer...",
+    "do it..."
+]
+
+failed_listening_lines = [
+    "that was not english.",
+    "you call that speaking?",
+    "zero clue of what you just said!",
+    "you didn't say it or my ears just broke.",
+    "volume up, babygurll.",
+    "speak louder, i ain't a mind reader....yet!",
+    "did you fail your english class?",
+    "something stuck in your mouth?"
+]
+
+timeout_lines = [
+    "I'll just wait over.",
+    "you done? or never started.",
+    "you said nothing, and i noticed.",
+    "aren't you dead yet.",
+    "you ghosted me live.",
+    "the silence is louder than you."
+]
 
 def take_instructions():
     r = sr.Recognizer()
     with sr.Microphone() as source:
-        print("\nListening...")
+        line = random.choice(listening_lines)
+        print(line)
         r.pause_threshold = 1
         audio = r.listen(source)
 
     try:
-        print("Let me see...")
+        try_lines = random.choice(timeout_lines)
+        print(try_lines)
         query = r.recognize_google(audio, language='en-in')
         print(f"You said: {query}")
 
-    except Exception as exp:
-        print(exp)
-        print("Unable to listen properly. Say Again. ")
+    except Exception as e:
+        print(e)
+        failed_lines = random.choice(failed_listening_lines)
+        print(failed_lines)
         return "none"
 
     return query
-#For YouTube search
+
+def take_screenshot():
+    time_now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    file_name = f"{time_now}-screenshot.jpg"
+    image = pyautogui.screenshot(file_name)
+    print(f"Took a screenshot and saved as {file_name}")
+    speak("Took a screenshot!")
+
 def searchyoutube(query):
     search = VideosSearch(query, limit=1)
     result = search.result()['result'][0]
     video_url = result['link']
     webbrowser.open(video_url)
 
+def is_windows():
+    try:
+        system = platform.system()
+        return system == "Windows"
+        
+    except Exception as e:
+        print(f"Some error occured while testing the OS: {e}")
+        return False
+
+def start_app(app_name):
+    prompt = model.generate_content(f"Extract the exact app name from this user command for opening applications Only provide the app name as a single word or standard command. Do not add extra text, explanations, or punctuation: '{app_name}'")
+    
+    app_name = prompt.text.strip()
+    
+    try:
+        subprocess.run([app_name], shell=True)
+        print(f"SApp Started: {app_name}")
+        
+    except FileNotFoundError:
+        print(f"\n{app_name} not found! Make sure it's installed and in PATH.")
+        
+    except Exception as e:
+        print(f"Some Unknown Error Occured: {e}")
+        
+def print_speak(query):
+    print(query)
+    speak(query)
+
 if __name__ == "__main__":
     wishme()
     while True:
         query = take_instructions().lower()
-        #For wikipedia search
         if 'wikipedia' in query:
             speak("Let me search the Wikipedia...")
             query = query.replace("wikipedia", "")
@@ -70,111 +144,50 @@ if __name__ == "__main__":
             speak("As per the Wikipedia, ")
             speak(searchResults)
 
-        #Opening Websites
-        elif "open youtube" in query:
-            webbrowser.open("youtube.com")
-            print("\nOpening Youtube!")
-            speak("Opening Youtube!")
-
-        elif "open google" in query:
-            webbrowser.open("google.com")
-            print("\nOpening Google!")
-            speak("Opening Google!")
-
-        elif "open linkedin" in query:
-            webbrowser.open("linkedin.com")
-            print("\nOpening LinkedIn!")
-            speak("Opening LinkedIn!")
-
-        elif "open github" in query:
-            webbrowser.open("github.com")
-            print("\nOpening Github!")
-            speak("Opening Github!")
-
-        elif "open stack overflow" in query:
-            webbrowser.open("stackoverflow.com")
-            print("\nOpening Stack Overflow!")
-            speak("Opening Stack Overflow!")
-
-        elif "open instagram" in query:
-            webbrowser.open("Instagram.com")
-            print("\nOpening Instagram!")
-            speak("Opening Instagram!")
-
-        elif "open whatsapp" in query:
-            webbrowser.open("web.whatsapp.com")
-            print("\nOpening Whatsapp!")
-            speak("Opening Whatsapp!")
-
-        elif "open amazon" in query:
-            webbrowser.open("amazon.in")
-            print("\nOpening Amazon!")
-            speak("Opening Amazon!")
-
-        elif "open geekforgeeks" in query:
-            webbrowser.open("geekforgeeks.com")
-            print("\nOpening GeekForGeeks!")
-            speak("Opening GeekForGeeks!")
-
-        elif "open w3 schools" in query:
-            webbrowser.open("w3schools.com")
-            print("\nOpening W3 Schools")
-            speak("Opening W3 Schools!")
-
-        elif "open twitter" in query or "open x" in query:
-            webbrowser.open("x.com")
-            print("\nOpening X!")
-            speak("Opening X!")
-
-        elif "open chatgpt" in query:
-            webbrowser.open("chat.openai.com")
-            print("\nOpening ChatGPT!")
-            speak("Opening ChatGPT!")
-
-        elif "open reddit" in query:
-            webbrowser.open("reddit.com")
-            print("\nOpening Reddit!")
-            speak("Opening Reddit!")
-
-        elif "open amazon" in query:
-            webbrowser.open("amazon.in")
-            print("\nOpening Amazon!")
-            speak("Opening Amazon!")
-
-        elif "open microsoft" in query:
-            webbrowser.open("microsoft.com")
-            print("\nOpening MicroSoft!")
-            speak("Opening MicroSoft!")
-
-        elif "open pinterest" in query:
-            webbrowser.open("pinterest.com")
-            print("\nOpening Pinterest!")
-            speak("Opening Pinterest!")
-
-        elif "open duck duck go" in query:
-            webbrowser.open("duckduckgo.com")
-            print("\nOpening Duck Duck Go!")
-            speak("Opening Duck Duck Go!")
-
-        elif "open weather" in query:
-            webbrowser.open("weather.com")
-            print("\nOpening Weather!")
-            speak("Opening Weather!")
-
-        elif "open quora" in query:
-            webbrowser.open("quora.com")
-            print("\nOpening Quora!")
-            speak("Opening Quora!")
-
-        elif "open telegram" in query:
-            webbrowser.open("web.telegram.org")
-            print("\nOpening Telegram!")
-            speak("Opening Telegram!")
-
-        elif "open zoom" in query:
-            webbrowser.open("zoom.com")
-            print("\nOpening Zoom!")
-            speak("Opening Zoom!")
+        elif "open" in query:
+            if "youtube" in query:
+                url, name = "https://youtube.com", "YouTube"
+            elif "google" in query:
+                url, name = "https://google.com", "Google"
+            elif "linkedin" in query:
+                url, name = "https://linkedin.com", "LinkedIn"
+            elif "github" in query:
+                url, name = "https://github.com", "GitHub"
+            elif "stack overflow" in query:
+                url, name = "https://stackoverflow.com", "Stack Overflow"
+            elif "instagram" in query:
+                url, name = "https://instagram.com", "Instagram"
+            elif "whatsapp" in query:
+                url, name = "https://web.whatsapp.com", "WhatsApp"
+            elif "amazon" in query:
+                url, name = "https://amazon.in", "Amazon"
+            elif "geekforgeeks" in query:
+                url, name = "https://geeksforgeeks.org", "GeeksForGeeks"
+            elif "w3 schools" in query:
+                url, name = "https://w3schools.com", "W3Schools"
+            elif "twitter" in query or "x" in query:
+                url, name = "https://x.com", "X"
+            elif "chatgpt" in query:
+                url, name = "https://chat.openai.com", "ChatGPT"
+            elif "reddit" in query:
+                url, name = "https://reddit.com", "Reddit"
+            elif "microsoft" in query:
+                url, name = "https://microsoft.com", "Microsoft"
+            elif "pinterest" in query:
+                url, name = "https://pinterest.com", "Pinterest"
+            elif "duck duck go" in query:
+                url, name = "https://duckduckgo.com", "Duck Duck Go"
+            elif "weather" in query:
+                url, name = "https://weather.com", "Weather"
+            elif "quora" in query:
+                url, name = "https://quora.com", "Quora"
+            elif "telegram" in query:
+                url, name = "https://web.telegram.org", "Telegram"
+            elif "zoom" in query:
+                url, name = "https://zoom.us", "Zoom"
+            else:
+                speak("Sorry, I don't recognize that site.")
+                continue
 
         elif "stop" in query:
             print("\nBye! Catch You Later.")
@@ -188,142 +201,90 @@ if __name__ == "__main__":
             speak(time)
 
         elif "open" in query and "code" in query:
-            pathFile = "C:\\Users\\risha\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe"
-            print("Opening VS Code!")
-            os.startfile(pathFile)
-            print("\nBye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye")
+            start_app(query)
+            print_speak("Opening VS Code!")
             break
 
         elif "open" in query and "photoshop" in query:
-            pathFile = "C:\\Program Files\\Adobe\\Adobe Photoshop 2020\\Photoshop.exe"
-            print("Opening Adobe Photoshop!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening Photoshop!")
             break
 
         elif "open" in query and "notepad" in query:
-            pathFile = "C:\\Windows\\notepad.exe"
-            print("Opening Notepad!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening Notepad!")
             break
 
         elif "open" in query and "filmora" in query:
-            pathFile = "C:\\Users\\risha\\AppData\\Local\\Wondershare\\Wondershare Filmora\\Wondershare Filmora Launcher.exe"
-            print("Opening Filmora!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening Filmora!")
             break
 
         elif "open" in query and "after effects" in query:
-            pathFile = "C:\\Program Files\\Adobe\\Adobe After Effects 2021\\Support Files\\AfterFX.exe"
-            print("Opening After Effects!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening Filmora!")
             break
 
-        elif "open" in query and "media player" in query:
-            pathFile = "C:\\Program Files\\VideoLAN\\VLC\\vlc.exe"
-            print("Opening Media Player!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+        elif "open" in query and "vlc" in query:
+            start_app(query)
+            print_speak("Opening VLC!")
             break
 
         elif "open" in query and "chrome" in query:
-            pathFile = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
-            print("Opening Chrome!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening Google Chrome!")
+            break
             break
 
         elif "open" in query and "media encoder" in query:
-            pathFile = "C:\\Program Files\\Adobe\\Adobe Media Encoder 2021\\Adobe Media Encoder.exe"
-            print("Opening Adobe Media Encoder!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening Adobe Media Encoder!")
             break
 
         elif "open" in query and "audacity" in query:
-            pathFile = "C:\\Program Files\\Audacity\\Audacity.exe"
-            print("Opening Audacity!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening Audacity!")
             break
 
         elif "open" in query and "github desktop" in query:
-            pathFile = "C:\\Users\\risha\\AppData\\Local\\GitHubDesktop\\GitHubDesktop.exe"
-            print("Opening Github Desktop!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening GitHub!")
             break
 
         elif "open" in query and "7 zip" in query:
-            pathFile = "C:\\Program Files\\7-Zip\\7zFM.exe"
-            print("Opening 7 Zip File Manager!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening 7-Zip!")
             break
 
         elif "open" in query and "excel" in query:
-            pathFile = "C:\\Program Files (x86)\\Microsoft Office\\Office12\\EXCEL.exe"
-            print("Opening Microsoft Excel!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening MS Excel!")
             break
 
         elif "open" in query and "word" in query:
-            pathFile = "C:\\Program Files (x86)\\Microsoft Office\\Office12\\WINWORD.exe"
-            print("Opening Microsoft Word!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening MS Word!")
             break
 
         elif "open" in query and "powerpoint" in query:
-            pathFile = "C:\\Program Files (x86)\\Microsoft Office\\Office12\\POWERPNT.exe"
-            print("Opening Microsoft PowerPoint!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
-            break
-
-        elif "open" in query and "powerpoint" in query:
-            pathFile = "C:\\Program Files (x86)\\Microsoft Office\\Office12\\POWERPNT.exe"
-            print("Opening Microsoft PowerPoint!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening MS Powerpoint!")
             break
 
         elif "open" in query and "explorer" in query:
-            pathFile = "C:\\Windows\\Explorer.exe"
-            print("Opening Explorer!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
-            break
+            if(is_windows()):
+                start_app(query)
+                print_speak("Opening Explorer!")
+                break
+            else:
+                print("This module doesn't support OS other than Windows!")
 
         elif "open" in query and "paint" in query:
-            pathFile = "C:\\Program Files\\WindowsApps\\Microsoft.Paint_11.2410.38.0_x64__8wekyb3d8bbwe\\PaintApp.exe"
-            print("Opening Explorer!")
-            os.startfile(pathFile)
-            print("\nBye Bye! Catch You Later.")
-            speak("Enjoy! Catch You Later. Bye Bye")
+            start_app(query)
+            print_speak("Opening Paint!")
             break
 
-        elif "play" and "on youtube" in query:
+        elif "play" in query and "on youtube" in query:
             query = query.replace("on youtube", "")
             query = query.replace("play", "").capitalize()
             print(f"Looking for {query}!")
@@ -338,9 +299,12 @@ if __name__ == "__main__":
             speak(joke)
 
         elif "text" in query:
-            query = query.replace("text", "")
-            print(f"Writing: {query}")
-            pyAutoGUI.typewrite(query)
+            if(is_windows()):
+                query = query.replace("text", "")
+                print(f"Writing: {query}")
+                pyautogui.typewrite(query)
+            else:
+                print("This module doesn't support OS other than Windows!")
 
         elif "explain" in query:
             query = query.replace("explain", "")
@@ -349,9 +313,10 @@ if __name__ == "__main__":
             speak(response.text)
 
         elif "take a screenshot" in query:
-            print("Took a screenshot!")
-            speak("Took a screenshot!")
-            image = pyAutoGUI.screenshot("screenshot.jpg")
+            if(is_windows()):
+                take_screenshot()
+            else:
+                print("This module doesn't support OS other than Windows!")
 
         else:
             response = model.generate_content(query)

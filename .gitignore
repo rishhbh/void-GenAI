@@ -1,0 +1,4 @@
+.env
+.vscode
+voice_assistant_no_gui.py
+voiceassistant.spec

@@ -1,0 +1,8 @@
+pyttsx3
+wikipedia
+SpeechRecognition
+youtubesearchpython
+pyjokes
+pyautogui
+google-generativeai
+python-dotenv
